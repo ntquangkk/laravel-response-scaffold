@@ -1,0 +1,56 @@
+
+        // Handle exceptions globally for API requests
+        $exceptions->render(function (Throwable $e, Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+
+                // Handle authentication exceptions
+                if ($e instanceof AuthenticationException) {
+                    return ApiResponse::error(
+                        message: 'Unauthenticated',
+                        statusCode: 401
+                    );
+                }
+
+                // Handle authorization exceptions
+                if ($e instanceof AuthorizationException) {
+                    return ApiResponse::error(
+                        message: $e->getMessage() ?: 'Unauthorized',
+                        statusCode: 403
+                    );
+                }
+
+                // Handle model not found exceptions
+                if ($e instanceof ModelNotFoundException || $e->getPrevious() instanceof ModelNotFoundException) {
+                    return ApiResponse::error(
+                        message: 'Resource not found',
+                        statusCode: 404
+                    );
+                }
+
+                // Handle not found exceptions
+                if ($e instanceof NotFoundHttpException && ! $e->getPrevious() instanceof ModelNotFoundException) {
+                    return ApiResponse::error(
+                        message: 'Endpoint not found',
+                        statusCode: 404,
+                        meta: ['url' => $request->url()]
+                    );
+                }
+
+                // Handle validation exceptions
+                if ($e instanceof ValidationException) {
+                    return ApiResponse::error(
+                        message: 'Validation failed',
+                        errors: $e->errors(),
+                        statusCode: 422
+                    );
+                }
+
+                // Handle other exceptions
+                return ApiResponse::error(
+                    message: config('app.debug') ? ($e->getMessage() ?: 'Server Error') : 'Server Error',
+                    errors: config('app.debug') && method_exists($e, 'errors') ? $e->errors() : [],
+                    statusCode: method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500,
+                    meta: ['url' => $request->url()]
+                );
+            }
+        });

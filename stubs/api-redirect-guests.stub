@@ -1,0 +1,9 @@
+
+        // Prevent redirecting API unauthenticated users to web login
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return null;
+            }
+
+            return route('login');
+        });

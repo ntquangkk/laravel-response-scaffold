@@ -1,0 +1,80 @@
+<?php
+{{ AUTO_GEN_FLAG }}
+
+namespace App\Support\Responses;
+
+use Illuminate\Contracts\Pagination\Paginator;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use Throwable;
+
+class ApiResponse
+{
+    public static function success(
+        string $message = 'Success',
+        mixed $data = null,
+        int $statusCode = 200,
+        array $meta = []
+    ) {
+        [$items, $pagination] = self::normalizeData($data);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $message,
+            'data' => $items,
+            'meta' => array_merge($meta, $pagination),
+        ], $statusCode);
+    }
+
+    public static function error(
+        string $message = 'Error',
+        array $errors = [],
+        int $statusCode = 400,
+        ?array $meta = [],
+        ?Throwable $exception = null
+    ) {
+        if (config('app.debug') && $exception) {
+            $meta['debug'] = [
+                'exception' => class_basename($exception),
+            ];
+        }
+
+        return response()->json([
+            'status' => 'error',
+            'message' => $message,
+            'errors' => $errors,
+            'meta' => $meta,
+        ], $statusCode);
+    }
+
+    /**
+     * Normalize data: detect data type and return items + meta pagination
+     */
+    private static function normalizeData(mixed $data): array
+    {
+        $pagination = [];
+
+        // If paginated
+        if ($data instanceof LengthAwarePaginator || $data instanceof Paginator) {
+            $pagination = [
+                'pagination' => [
+                    'current_page' => $data->currentPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => method_exists($data, 'total') ? $data->total() : null,
+                    'last_page' => method_exists($data, 'lastPage') ? $data->lastPage() : null,
+                ],
+            ];
+
+            return [$data->items(), $pagination];
+        }
+
+        // If Collection, Model
+        if ($data instanceof Collection || $data instanceof Model) {
+            return [$data->toArray(), $pagination];
+        }
+
+        // If array or primitive (string, int, float, bool, null)
+        return [$data, $pagination];
+    }
+}

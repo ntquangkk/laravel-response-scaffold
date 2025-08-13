@@ -11,9 +11,14 @@ use Throwable;
 
 class ApiResponse
 {
+    /*
+    * Data-first: data -> message -> statusCode -> meta
+    * Most important/most variable -> least variable
+    * with Success, the data is the most important & changes a lot
+    */
     public static function success(
+        mixed $data = null, //
         string $message = 'Success',
-        mixed $data = null,
         int $statusCode = 200,
         array $meta = []
     ) {
@@ -27,11 +32,16 @@ class ApiResponse
         ], $statusCode);
     }
 
+    /*
+    * Message-first: message -> errors -> statusCode -> meta -> exception
+    * Most important/most variable -> least variable
+    * with Error, the message is the most important
+    */
     public static function error(
-        string $message = 'Error',
+        string $message = 'Error', //
         array $errors = [],
         int $statusCode = 400,
-        ?array $meta = [],
+        array $meta = [],
         ?Throwable $exception = null
     ) {
         if (config('app.debug') && $exception) {

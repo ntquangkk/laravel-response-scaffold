@@ -73,31 +73,65 @@ routes/
 
 ## 💡 Examples
 
-Using in Controller:
+> How to use:
+1. Shorthand with parameter order
+2. Named parameters with arbitrary order (PHP 8+)
 
 ```php
 use App\Support\Responses\ApiResponse;
 
-class UserController
+class Example
 {
-    public function show($id)
+    public function shorthands()
     {
-        $user = User::find($id);
+        // Just data
+        ApiResponse::success($users);
 
-        if (! $user) {
-            return ApiResponse::error(
-                message: 'User not found',
-                statusCode: 404,
-            );
+        // With custom message
+        ApiResponse::success($users, 'Users loaded');
+
+        // With custom status code
+        ApiResponse::success($user, 'User created', 201);
+
+        // Full parameters
+        ApiResponse::success($users, 'Users found', 200, ['page' => 3]);
+
+        // Error cases
+        ApiResponse::error('Server error');
+        ApiResponse::error('User not found', [], 404);
+        ApiResponse::error('Validation failed', $validator->errors(), 422);
+
+        // With exception (debug)
+        try {
+            // some code
+        } catch (Exception $e) {
+            return ApiResponse::error('Something went wrong', [], 500, [], $e);
         }
+    }
 
-        return ApiResponse::success(
-            message: 'User retrieved successfully',
-            data: $user,
+    public function namedParameters()
+    {
+        // Full parameters, in arbitrary order
+        ApiResponse::success(
+           data: $users, 
+           message: 'Users found', 
+           statusCode: 200, 
+           meta: ['page' => 3]
+        );
+
+        // Error case
+        ApiResponse::error(
+            message: 'Something went wrong',
+            errors: $validator->errors(),
+            statusCode: 422,
+            meta: ['s' => 2],
+            exception: $e   // <- in try-catch {}, if needed
         );
     }
 }
 ```
+💡 Tip: Named parameters make your code more readable and avoid mistakes when skipping optional arguments.
+
 When there is an error like `NotFoundHttpException`, the API will return:
 
 ```json
